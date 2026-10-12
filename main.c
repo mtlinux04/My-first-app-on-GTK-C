@@ -57,10 +57,10 @@ static gboolean search_filter(GtkListBoxRow *row, gpointer user_data) {
     return g_strrstr(task_text, search_text) != NULL;
 }
 
-static void on_search_clicked(GtkButton *btn, gpointer user_data) {
-    TaskData *local_data = (TaskData *)user_data;
-    gtk_list_box_invalidate_filter(local_data->listbox);
-}
+// static void on_search_clicked(GtkButton *btn, gpointer user_data) {
+//     TaskData *local_data = (TaskData *)user_data;
+//     gtk_list_box_invalidate_filter(local_data->listbox);
+// }
 
 static void search_dialog(GtkButton *btn, gpointer user_data) {
     TaskData *local_data = (TaskData *)user_data;
@@ -87,35 +87,42 @@ static void search_dialog(GtkButton *btn, gpointer user_data) {
     GtkWidget *search_listbox = gtk_list_box_new();
 
     /// **************************************** ///
+    GtkListBoxRow *row;
+    int i = 0;
 
-    GtkWidget *child = gtk_widget_get_first_child(GTK_WIDGET(local_data->listbox));
+    while ((row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(local_data->listbox), i++))) {
+        if (GTK_IS_LIST_BOX_ROW(row))
+            g_print("Found a row child!\n");
 
-    if (GTK_IS_LIST_BOX_ROW(child))
-        g_print("Found a row child!\n");
+        GtkWidget *child2 = gtk_list_box_row_get_child(GTK_LIST_BOX_ROW(row)); // child
 
-    GtkWidget *child2 = gtk_list_box_row_get_child(GTK_LIST_BOX_ROW(child));
+        if (GTK_IS_BOX(child2))
+            g_print("Found a box child2!\n");
 
-    if (GTK_IS_BOX(child2))
-        g_print("Found a box child2!\n");
+        GtkWidget *child3 = gtk_widget_get_first_child(child2);
 
-    GtkWidget *child3 = gtk_widget_get_first_child(child2);
+        if (GTK_IS_BOX(child3))
+            g_print("Found a box child3!\n");
 
-    if (GTK_IS_BOX(child3))
-        g_print("Found a box child3!\n");
+        GtkWidget *child4 = gtk_widget_get_first_child(child3);
 
-    GtkWidget *child4 = gtk_widget_get_first_child(child3);
+        if (GTK_IS_CHECK_BUTTON(child4))
+            g_print("Found a checkbox child4!\n");
 
-    if (GTK_IS_CHECK_BUTTON(child4))
-        g_print("Found a checkbox child4!\n");
+        GtkWidget *child5 = gtk_widget_get_next_sibling(child4);
 
-    GtkWidget *child5 = gtk_widget_get_next_sibling(child4);
+        if (GTK_IS_LABEL(child5))
+            g_print("Found a label child5!\n");
+            g_print(gtk_label_get_text(GTK_LABEL(child5)));
 
-    if (GTK_IS_LABEL(child5))
-        g_print("Found a label child5!\n");
+        GtkWidget *child5_txt = gtk_label_new(gtk_label_get_text(GTK_LABEL(child5)));
 
-    /// **************************************** ///
+        gtk_list_box_append(GTK_LIST_BOX(search_listbox), child5_txt);
+    }
 
     gtk_box_append(GTK_BOX(box), GTK_WIDGET(search_listbox));
+
+    /// **************************************** ///
 
     gtk_window_present(GTK_WINDOW(local_data->dialog));
 }
