@@ -7,6 +7,10 @@ typedef struct {
     GtkListBoxRow *row_to_delete;
 } TaskData;
 
+typedef struct {
+    GtkListBox *search_listbox;
+} SearchData;
+
 // If "x" button is pressed on dialog window, then destroy it
 static void on_dialog_destroy(GtkWidget *widget, gpointer user_data) {
     TaskData *local_data = (TaskData *)user_data;
@@ -24,43 +28,25 @@ static void complete_task(GtkCheckButton *checkbox, gpointer user_data) {
     }
 }
 
-static gboolean search_filter(GtkListBoxRow *row, gpointer user_data) {
-    TaskData *local_data = (TaskData *)user_data;
+gboolean filter_list(GtkListBoxRow *row, gpointer user_data) {
+    GtkWidget *child_outer_box = gtk_list_box_row_get_child(row);
+    GtkWidget *child_inner_box = gtk_widget_get_first_child(child_outer_box);
+    GtkWidget *child_checkbox = gtk_widget_get_first_child(child_inner_box);
+    GtkWidget *child_label = gtk_widget_get_next_sibling(child_checkbox);
 
-    if (!row || !local_data || !local_data->entry)
-        return TRUE;
-
-    const char *search_text = gtk_editable_get_text(GTK_EDITABLE(local_data->entry));
-    if (!search_text || strlen(search_text) == 0)
-        return TRUE;
-
-    GtkWidget *box_row = gtk_list_box_row_get_child(row);
-    if (!box_row || !GTK_IS_BOX(box_row))
-        return TRUE;
-
-    GtkWidget *box_row_task = gtk_widget_get_first_child(box_row);
-    if (!box_row_task || !GTK_IS_BOX(box_row_task))
-        return TRUE;
-
-    GtkWidget *checkbox = gtk_widget_get_first_child(box_row_task);
-    if (!checkbox)
-        return TRUE;
-
-    GtkWidget *label = gtk_widget_get_next_sibling(checkbox);
-    if (!label || !GTK_IS_LABEL(label))
-        return TRUE;
-
-    const char *task_text = gtk_label_get_text(GTK_LABEL(label));
-    if (!task_text)
-        return FALSE;
-
-    return g_strrstr(task_text, search_text) != NULL;
+    const char* row_text = gtk_label_get_text(GTK_LABEL(child_label));
+    char* term = (char*) user_data;
+    return strstr(row_text, term) ? TRUE : FALSE;
 }
 
-// static void on_search_clicked(GtkButton *btn, gpointer user_data) {
-//     TaskData *local_data = (TaskData *)user_data;
-//     gtk_list_box_invalidate_filter(local_data->listbox);
-// }
+static void on_search_entry(GtkEditable *editable, gpointer user_data) {
+    SearchData *self = (SearchData *)user_data;
+    g_print("on search entry func\n");
+    char *text = gtk_editable_get_text(editable);
+
+    if (text)
+        gtk_list_box_set_filter_func(self->search_listbox, filter_list, text, NULL);
+}
 
 static void search_dialog(GtkButton *btn, gpointer user_data) {
     TaskData *local_data = (TaskData *)user_data;
@@ -84,44 +70,48 @@ static void search_dialog(GtkButton *btn, gpointer user_data) {
 
     gtk_box_append(GTK_BOX(box), GTK_WIDGET(local_data->entry));
 
-    GtkWidget *search_listbox = gtk_list_box_new();
+    GtkWidget *listbox = gtk_list_box_new();
+    SearchData *self = g_new0(SearchData, 1);
+    self->search_listbox = GTK_LIST_BOX(listbox);
 
     /// **************************************** ///
     GtkListBoxRow *row;
     int i = 0;
 
     while ((row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(local_data->listbox), i++))) {
-        if (GTK_IS_LIST_BOX_ROW(row))
-            g_print("Found a row child!\n");
+        GtkWidget *child_outer_box = gtk_list_box_row_get_child(GTK_LIST_BOX_ROW(row));
+        GtkWidget *child_inner_box = gtk_widget_get_first_child(child_outer_box);
+        GtkWidget *child_checkbox = gtk_widget_get_first_child(child_inner_box);
+        GtkWidget *child_label = gtk_widget_get_next_sibling(child_checkbox);
 
-        GtkWidget *child2 = gtk_list_box_row_get_child(GTK_LIST_BOX_ROW(row)); // child
+        // Creating new widgets for search listbox
+        GtkWidget *row_current = gtk_list_box_row_new();
+        GtkWidget *checkbox = gtk_check_button_new();
+        GtkWidget *label = gtk_label_new(NULL);
+        const char* row_text = gtk_label_get_text(GTK_LABEL(child_label));
 
-        if (GTK_IS_BOX(child2))
-            g_print("Found a box child2!\n");
+        gtk_widget_set_sensitive(GTK_WIDGET(checkbox), FALSE);
+        gtk_label_set_text(GTK_LABEL(label), row_text);
 
-        GtkWidget *child3 = gtk_widget_get_first_child(child2);
+        // Creating boxes for placing widgets
+        GtkWidget *box_row = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+        gtk_widget_set_halign(box_row, GTK_ALIGN_FILL);
+        gtk_widget_set_hexpand(box_row, TRUE);
 
-        if (GTK_IS_BOX(child3))
-            g_print("Found a box child3!\n");
+        GtkWidget *box_row_task = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+        gtk_box_append(GTK_BOX(box_row), box_row_task);
 
-        GtkWidget *child4 = gtk_widget_get_first_child(child3);
+        gtk_box_append(GTK_BOX(box_row_task), checkbox);
+        gtk_box_append(GTK_BOX(box_row_task), label);
 
-        if (GTK_IS_CHECK_BUTTON(child4))
-            g_print("Found a checkbox child4!\n");
-
-        GtkWidget *child5 = gtk_widget_get_next_sibling(child4);
-
-        if (GTK_IS_LABEL(child5))
-            g_print("Found a label child5!\n");
-            g_print(gtk_label_get_text(GTK_LABEL(child5)));
-
-        GtkWidget *child5_txt = gtk_label_new(gtk_label_get_text(GTK_LABEL(child5)));
-
-        gtk_list_box_append(GTK_LIST_BOX(search_listbox), child5_txt);
+        // 1111111111111
+        gtk_list_box_row_set_child(GTK_LIST_BOX_ROW(row_current), box_row);
+        gtk_list_box_append(self->search_listbox, row_current);
     }
 
-    gtk_box_append(GTK_BOX(box), GTK_WIDGET(search_listbox));
+    gtk_box_append(GTK_BOX(box), GTK_WIDGET(self->search_listbox));
 
+    g_signal_connect(local_data->entry, "changed", G_CALLBACK(on_search_entry), self);
     /// **************************************** ///
 
     gtk_window_present(GTK_WINDOW(local_data->dialog));
@@ -342,8 +332,8 @@ static void app_activate(GApplication *app, gpointer *user_data) {
     g_signal_connect(addtaskBtn, "clicked", G_CALLBACK(add_task_dialog), data);
     g_signal_connect(searchBtn, "clicked", G_CALLBACK(search_dialog), data);
 
-    gtk_window_set_child (GTK_WINDOW(window), box);
-    gtk_window_present (GTK_WINDOW(window));
+    gtk_window_set_child(GTK_WINDOW(window), box);
+    gtk_window_present(GTK_WINDOW(window));
 }
 
 int main(int argc, char **argv) {
