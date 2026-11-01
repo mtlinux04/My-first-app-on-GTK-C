@@ -17,14 +17,17 @@ static void on_dialog_destroy(GtkWidget *widget, gpointer user_data) {
     local_data->dialog = NULL;
 }
 
-static void complete_task(GtkCheckButton *checkbox, gpointer user_data) {
-    TaskData *local_data = (TaskData *)user_data;
+static void complete_task(GObject *object, gpointer user_data) {
+    TaskData *data = (TaskData *)user_data;
+    GtkCheckButton *button = GTK_CHECK_BUTTON(object);
 
-    if (gtk_check_button_get_active(checkbox)) {
-        GtkWidget *row = gtk_widget_get_ancestor(GTK_WIDGET(checkbox), GTK_TYPE_LIST_BOX_ROW);
+    if (gtk_check_button_get_active(button)) {
+        GtkListBoxRow *row = GTK_LIST_BOX_ROW(user_data);
+        GtkWidget *list = gtk_widget_get_parent(GTK_WIDGET(row));
 
-        if (row)
-            gtk_list_box_remove(local_data->listbox, row);
+        gtk_list_box_select_row(GTK_LIST_BOX(list), row);
+        gtk_list_box_remove(GTK_LIST_BOX(list), GTK_WIDGET(row));
+
     }
 }
 
